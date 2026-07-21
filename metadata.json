@@ -1,0 +1,6 @@
+{
+  "name": "HomeLab Command Center",
+  "description": "Unified dashboard and command center for managing homelab services, Proxmox hypervisors, VLAN architecture, storage pools, and health metrics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
