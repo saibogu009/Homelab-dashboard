@@ -13,10 +13,10 @@ SERVICE_NAME="homelab-dashboard"
 PORT=3000
 
 # Color definitions
-RED='\031[0;31m'
-GREEN='\032[0;32m'
+RED='\033[0;31m'
+GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-BLUE='\034[0;34m'
+BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
@@ -36,32 +36,59 @@ apt-get update -qq
 apt-get install -y -qq curl git build-essential ca-certificates gnupg >/dev/null
 
 echo -e "${BLUE}[2/5] Checking and installing Node.js 20.x LTS...${NC}"
-if ! command -v node &> /dev/null || [[ $(node -v | cut -d'.' -f1 | tr -d 'v') -lt 18 ]]; then
-    mkdir -p /etc/apt/keyrings
-    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
-    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list >/dev/null
-    apt-get update -qq
+if ! command -v node &> /dev/null || [[ $(node -v | cut -d'v' -f2 | cut -d'.' -f1) -lt 18 ]]; then
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
     apt-get install -y -qq nodejs >/dev/null
 fi
 
 echo -e "${GREEN}✓ Node.js $(node -v) installed.${NC}"
 
+# Accept repository from parameter 1, env var REPO_URL, or GITHUB_REPOSITORY
+REPO="${1:-${REPO_URL:-${GITHUB_REPOSITORY:-}}}"
+
 echo -e "${BLUE}[3/5] Setting up application files in ${INSTALL_DIR}...${NC}"
 mkdir -p "${INSTALL_DIR}"
 
-# If running inside a git cloned directory or if script was run standalone
 if [ -f "./package.json" ]; then
     echo -e "Copying local repository files to ${INSTALL_DIR}..."
-    cp -r ./* "${INSTALL_DIR}/"
-elif [ -n "${GITHUB_REPOSITORY:-}" ]; then
-    echo -e "Cloning ${GITHUB_REPOSITORY} into ${INSTALL_DIR}..."
-    git clone "https://github.com/${GITHUB_REPOSITORY}.git" "${INSTALL_DIR}"
+    cp -rn ./* "${INSTALL_DIR}/" 2>/dev/null || cp -r ./* "${INSTALL_DIR}/"
+elif [ -n "${REPO}" ]; then
+    # Format repo URL if user passed "user/repo" vs full https URL
+    if [[ "${REPO}" != http* ]]; then
+        REPO="https://github.com/${REPO}.git"
+    fi
+    echo -e "Cloning ${REPO} into ${INSTALL_DIR}..."
+    rm -rf "${INSTALL_DIR:?}"/*
+    git clone "${REPO}" "${INSTALL_DIR}"
+else
+    # Interactive prompt fallback if running in TTY, else error
+    if [ -t 0 ]; then
+        echo -e "${YELLOW}Please enter your GitHub repository (e.g. username/repository or https://github.com/username/repository.git):${NC}"
+        read -r REPO_INPUT
+        if [[ "${REPO_INPUT}" != http* ]]; then
+            REPO_INPUT="https://github.com/${REPO_INPUT}.git"
+        fi
+        echo -e "Cloning ${REPO_INPUT} into ${INSTALL_DIR}..."
+        git clone "${REPO_INPUT}" "${INSTALL_DIR}"
+    else
+        echo -e "${RED}Error: package.json not found and no GitHub repository specified.${NC}"
+        echo -e "Please pass your repository when running the installer script, for example:"
+        echo -e "  ${CYAN}curl -fsSL <script_url> | bash -s -- username/repo${NC}"
+        echo -e "or set the REPO_URL environment variable:"
+        echo -e "  ${CYAN}REPO_URL=https://github.com/username/repo.git bash install.sh${NC}"
+        exit 1
+    fi
 fi
 
 cd "${INSTALL_DIR}"
 
-echo -e "${BLUE}[4/5] Installing npm packages & building production distribution...${NC}"
-npm ci --prefer-offline --no-audit || npm install --no-audit
+if [ ! -f "package.json" ]; then
+    echo -e "${RED}Error: package.json was not found in ${INSTALL_DIR}. Installation aborted.${NC}"
+    exit 1
+fi
+
+echo -e "${BLUE}[4/5] Installing npm dependencies & building production assets...${NC}"
+npm install --no-audit --no-fund
 npm run build
 
 echo -e "${BLUE}[5/5] Creating Systemd service (${SERVICE_NAME}.service)...${NC}"
