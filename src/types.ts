@@ -111,6 +111,25 @@ export interface SmartHomeDevice {
   unit?: string;
 }
 
+export interface ApiIntegrationsConfig {
+  homeAssistantUrl?: string;
+  homeAssistantToken?: string;
+  proxmoxUrl?: string;
+  proxmoxTokenId?: string;
+  proxmoxTokenSecret?: string;
+  qbitUrl?: string;
+  qbitUsername?: string;
+  qbitPassword?: string;
+  jellyfinUrl?: string;
+  jellyfinApiKey?: string;
+  sonarrUrl?: string;
+  sonarrApiKey?: string;
+  radarrUrl?: string;
+  radarrApiKey?: string;
+  trueNasUrl?: string;
+  trueNasApiKey?: string;
+}
+
 export interface DashboardSettings {
   themeAccent: 'emerald' | 'sapphire' | 'violet' | 'amber' | 'cyan';
   layoutDensity: 'comfortable' | 'compact';
@@ -118,4 +137,5 @@ export interface DashboardSettings {
   openLinksInNewTab: boolean;
   defaultSearchEngine: 'google' | 'duckduckgo' | 'searxng' | 'internal_only';
   customDomainPrefix: string;
+  apiConfig?: ApiIntegrationsConfig;
 }

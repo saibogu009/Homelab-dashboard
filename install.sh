@@ -43,8 +43,9 @@ fi
 
 echo -e "${GREEN}✓ Node.js $(node -v) installed.${NC}"
 
-# Accept repository from parameter 1, env var REPO_URL, or GITHUB_REPOSITORY
-REPO="${1:-${REPO_URL:-${GITHUB_REPOSITORY:-}}}"
+DEFAULT_REPO="saibogu009/Homelab-dashboard"
+# Accept repository from parameter 1, env var REPO_URL, or GITHUB_REPOSITORY (falling back to DEFAULT_REPO)
+REPO="${1:-${REPO_URL:-${GITHUB_REPOSITORY:-${DEFAULT_REPO}}}}"
 
 echo -e "${BLUE}[3/5] Setting up application files in ${INSTALL_DIR}...${NC}"
 mkdir -p "${INSTALL_DIR}"
@@ -73,9 +74,9 @@ else
     else
         echo -e "${RED}Error: package.json not found and no GitHub repository specified.${NC}"
         echo -e "Please pass your repository when running the installer script, for example:"
-        echo -e "  ${CYAN}curl -fsSL <script_url> | bash -s -- username/repo${NC}"
-        echo -e "or set the REPO_URL environment variable:"
-        echo -e "  ${CYAN}REPO_URL=https://github.com/username/repo.git bash install.sh${NC}"
+        echo -e "  ${CYAN}curl -fsSL https://raw.githubusercontent.com/saibogu009/Homelab-dashboard/main/install.sh | bash${NC}"
+        echo -e "or pass a specific repo:"
+        echo -e "  ${CYAN}curl -fsSL https://raw.githubusercontent.com/saibogu009/Homelab-dashboard/main/install.sh | bash -s -- saibogu009/Homelab-dashboard${NC}"
         exit 1
     fi
 fi

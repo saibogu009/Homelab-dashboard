@@ -46,6 +46,8 @@ import {
   Network
 } from 'lucide-react';
 
+import { pingService } from './lib/apiServices';
+
 export default function App() {
   // Persistence Keys
   const STORAGE_KEY_SERVICES = 'homelab_services_v1';
@@ -116,24 +118,27 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Ping All Services Simulator
-  const handleRefreshAllPings = useCallback(() => {
+  // Ping All Services with real HTTP latency timing
+  const handleRefreshAllPings = useCallback(async () => {
     setIsRefreshing(true);
     setServices((prev) =>
       prev.map((s) => ({ ...s, status: 'checking' }))
     );
 
-    setTimeout(() => {
-      setServices((prev) =>
-        prev.map((s) => ({
-          ...s,
-          status: 'online',
-          latencyMs: Math.floor(Math.random() * 6) + 1
-        }))
-      );
-      setIsRefreshing(false);
-    }, 600);
-  }, []);
+    const updated = await Promise.all(
+      services.map(async (service) => {
+        const pingRes = await pingService(service);
+        return {
+          ...service,
+          status: pingRes.status,
+          latencyMs: pingRes.latencyMs
+        };
+      })
+    );
+
+    setServices(updated);
+    setIsRefreshing(false);
+  }, [services]);
 
   // Handlers
   const handleToggleFavorite = (id: string) => {
@@ -413,6 +418,8 @@ export default function App() {
             smartDevices={INITIAL_SMART_DEVICES}
             torrents={INITIAL_TORRENTS}
             streams={INITIAL_JELLYFIN_STREAMS}
+            apiConfig={settings.apiConfig}
+            onOpenSettingsModal={() => setIsSettingsOpen(true)}
           />
         )}
 
